@@ -411,6 +411,82 @@ class NeedlemanWunsch(StringAlignment):
 
         # Return the aligned strings.
         return aligned_str1, aligned_str2
+
+    # The auxilary backtrack function.
+    def backtrack2(self,
+        score_matrix: np.ndarray,
+        str1: Union[str, List[str]],
+        str2: Union[str, List[str]],
+    ) -> Tuple[Union[str, List[str]], Union[str, List[str]]]:
+        r"""
+        This function is an auxilary function, used by the get_alignment() function, that backtracks the score matrix to get the aligned strings.
+
+        Arguments:
+            score_matrix (np.ndarray): The score matrix.
+            str1: The first string (or list of strings).
+            str2: The second string (or list of strings).
+        
+        Returns:
+            The aligned strings (or list of strings). The aligned strings are padded with spaces to make them the same length.
+
+        .. note::
+            * The score matrix is assumed to be a 2D numpy array.
+            * There might be multiple optimal alignments. This function returns one of the optimal alignments.
+            * The backtracking step has a time complexity of :math:`O(m + n)`, where :math:`n` and :math:`m` are the lengths of the strings str1 and str2, respectively.
+        """
+
+        # Lengths of strings str1 and str2, respectively.
+        len1 = len(str1)
+        len2 = len(str2)
+
+        # Initialize the aligned strings.
+        lst1 = []
+        lst2 = []
+
+        # Initialize the current position.
+        i = len1
+        j = len2
+
+        
+
+        # Backtrack until the current position is (0, 0).
+        while i > 0 and j > 0:
+            # If the current position is the result of a match/mismatch, add the characters to the aligned strings and move to the diagonal.
+            if score_matrix[i, j] == score_matrix[i - 1, j - 1] + self.get_score(str1[i - 1], str2[j - 1]):
+                (ch1, ch2) = (str1[i-1], str2[j-1])
+                i -= 1
+                j -= 1
+            # If the current position is the result of a gap in str1, add a gap to str1 and the character to str2 and move to the left.
+            elif score_matrix[i, j] == score_matrix[i, j - 1] + self.get_gap_weight(str2[j - 1]):
+                (ch1, ch2) = (self.gap_char, str2[j-1])
+                j -= 1
+            # If the current position is the result of a gap in str2, add a gap to str2 and the character to str1 and move up.
+            elif score_matrix[i, j] == score_matrix[i - 1, j] + self.get_gap_weight(str1[i - 1]):
+                (ch1, ch2) = (str1[i-1], self.gap_char)
+                i -= 1
+            
+            # Add the characters to the aligned strings.
+            lst1.append(ch1)
+            lst2.append(ch2)
+
+        # If there are still characters in str1, add them to the aligned strings.
+        while i > 0:
+            (ch1, ch2) = (str1[i-1], self.gap_char)
+            lst1.append(ch1)
+            lst2.append(ch2)                          
+            i -= 1
+
+        # If there are still characters in str2, add them to the aligned strings.
+        while j > 0:
+            (ch1, ch2) = (self.gap_char, str2[j-1])
+            lst1.append(ch1)
+            lst2.append(ch2)                                                    
+            j -= 1
+            
+        lst1.reverse()
+        lst2.reverse()
+
+        return lst1, lst2
     
 
     # Get the alignment of two strings (or list of strings).
@@ -464,13 +540,25 @@ class NeedlemanWunsch(StringAlignment):
                 # Fill the score matrix.
                 score_matrix[i, j] = max_score
 
-        # Get the alignment.
-        aligned_str1, aligned_str2 = self.backtrack(score_matrix, str1, str2)
+        # Get the alignment.                
+        # old code
+        # aligned_str1, aligned_str2 = self.backtrack(score_matrix, str1, str2)
 
+        # # Return the alignment and the score matrix.
+        # if return_score_matrix:
+        #     return aligned_str1, aligned_str2, score_matrix
+        # return aligned_str1, aligned_str2
+
+        # new code - return lists instead of the aligned strings
+        # a hack for now - take a paramater for what to return or
+        # maybe there's some other way here to do it already
+        (lst1, lst2) = self.backtrack2(score_matrix, str1, str2)
         # Return the alignment and the score matrix.
         if return_score_matrix:
-            return aligned_str1, aligned_str2, score_matrix
-        return aligned_str1, aligned_str2
+            return lst1, lst2, score_matrix
+        return lst1, lst2
+        
+    
 
 
 # Hirschberg algorithm (linear space algorithm).
